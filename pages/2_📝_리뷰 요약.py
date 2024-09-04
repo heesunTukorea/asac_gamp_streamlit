@@ -7,12 +7,14 @@ import streamlit.components.v1 as components
 from secrets_1 import HOST, HTTP_PATH, PERSONAL_ACCESS_TOKEN,REVIEW_API_KEY
 import anthropic
 
-# Databricks 연결
+
 st.set_page_config(page_title="Gmap 리뷰 요약 시스템", page_icon="📝", layout="wide")
 
+#클로드 api input_prompt입력 및 사용
 def get_summary_and_keywords(review_text):
     message = client.messages.create(
         model="claude-3-5-sonnet-20240620",
+        #최대 토큰값 지정
         max_tokens=1000,
         temperature=0,
         system="한국어로 텍스트를 3문장으로 요약해 주세요. 각 문장은 10단어 이내로 해 주세요. 또한, 내용에서 중요한 키워드 10개를 추출해 주세요, 키워드 10개에 대한 제목은 주요 키워드로 해주세요.  \n" ,
@@ -25,7 +27,7 @@ def get_summary_and_keywords(review_text):
     content = content.replace('[TextBlock(text=\'', '')
     content = content.replace(', type=\'text\')]', '')
     return content
-                
+#클로드 api 결과값 반환 및 전처리               
 def truncate_review_text(review_text, max_tokens=2000):
     # 텍스트를 공백 기준으로 토큰화
     tokens = review_text.split()
@@ -50,8 +52,7 @@ with sql.connect(server_hostname=HOST, http_path=HTTP_PATH, access_token=PERSONA
     with conn.cursor() as cursor:
         # Streamlit 앱
         st.title("Gmap 리뷰 요약 시스템📝")
-        # st.session_state.selected_gmap_id = ""
-        # st.session_state.gmap_id1 = ""
+
         # 세션 상태 초기화
         if "page" not in st.session_state:
             st.session_state.page = "main"
@@ -72,16 +73,13 @@ with sql.connect(server_hostname=HOST, http_path=HTTP_PATH, access_token=PERSONA
             st.session_state.gmap_id1 = gmap_id1
             with st.sidebar:
             # 랜덤 gmap_id1 선택 버튼 추가
-                # col_gmap_button,col_review_button=st.columns([5,5])
-                # with col_gmap_button:
                 if st.button("🎲랜덤 선택"):
                     query = """SELECT gmap_id1 FROM `hive_metastore`.`streamlit`.`gmap_id1_info` ORDER BY RAND() LIMIT 1"""
                     cursor.execute(query)
                     gmap_id1 = cursor.fetchone()[0]
                     st.session_state.gmap_id1 = gmap_id1
                     gmap_id1 = gmap_id1
-                # with col_review_button:
-                #     review_button = st.button("리뷰 요약")
+
 
                         
 
@@ -137,24 +135,26 @@ with sql.connect(server_hostname=HOST, http_path=HTTP_PATH, access_token=PERSONA
                         st.subheader(f'**{name1}**')
                         with st.container(height=con_size):
                             col_dummy, col_main, col_dummy2 = st.columns([0.5, 8, 0.2])
+                            #gmap_id1 지도 정보
                             with col_main:
                                 m = folium.Map(location=[latitude1, longitude1], zoom_start=16)
 
                                 marker = create_emoji_marker(latitude1, longitude1, name1, address1, gmap_id1,first_main_category1, 'red','',url1)
                                 marker.add_to(m)
-                                #folium.LayerControl(collapsed=False).add_to(m)
+
                                 
                                 map_data = st_folium(m, width=width, height=height)
                     with col2:
                         st.subheader(f'**{name2}**')
                         with st.container(height=con_size):
                             col_dummy, col_main, col_dummy2 = st.columns([0.5, 8, 0.2])
+                            #gmap_id2 지도 정보
                             with col_main:
                                 m = folium.Map(location=[latitude2, longitude2], zoom_start=16)
 
                                 marker = create_emoji_marker(latitude2, longitude2, name2, address2, gmap_id2,first_main_category2, 'blue','',url2).add_to(m)
                                 marker.add_to(m)
-                                #folium.LayerControl(collapsed=False).add_to(m)
+
                                 
                                 map_data = st_folium(m, width=width, height=height)
                                 
@@ -205,23 +205,6 @@ with sql.connect(server_hostname=HOST, http_path=HTTP_PATH, access_token=PERSONA
                     review_summary2(review_text1_result,review_text2_result)
                     
                     
-                    # col_gmap1,col_gmap2 = st.columns([5,5])
-                    # # 선택된 위치의 리뷰 표시
-                    # with col_gmap1:
-                    #     #with st.expander('리뷰요약'):
-                    #     st.subheader("📜선택된 위치 리뷰")
-                            
-                    #     review_summary(review_text1_result)
-                        
-
-                    # # 추천 위치의 리뷰 표시
-                    # with col_gmap2:
-                    #     #with st.expander('리뷰요약'):
-                    #     st.subheader("📜추천 위치 리뷰")
-
-                    #     review_summary(review_text2_result)
-                    # # st.write(document1)
-                    #     st.write(document2)
                 except:
                     st.sidebar.write('')
                 

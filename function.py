@@ -9,8 +9,8 @@ from secrets_1 import HOST, HTTP_PATH, PERSONAL_ACCESS_TOKEN
 import streamlit.components.v1 as components
 import time
 import re
-# Databricks 연결 정보 설정
 
+#streamlit에서 쓸 함수 모음
 
 # 이미지 크기 조정 함수 정의
 def resize_image(image_url, target_width=150, target_height=150):
@@ -19,6 +19,7 @@ def resize_image(image_url, target_width=150, target_height=150):
     img_resized = img.resize((target_width, target_height), Image.LANCZOS)
     return img_resized
 
+# 이모지 크기 조정 함수
 def resize_emoji(emoji, font_size=50):
    
     html_code = f"<div style='text-align: center;'><span style='font-size: {font_size}px;'>{emoji}</span></div>"
@@ -56,6 +57,7 @@ def render_stars(rating):
 
     return stars_html
 
+# 달러를 HTML로 변환하는 함수
 def render_dollars(d_rating):
     full_dollars = int(d_rating)  # 전체 달러의 수
     half_dollar = int((d_rating - full_dollars) >= 0.5)  # 반 달러의 유무
@@ -73,7 +75,7 @@ def render_dollars(d_rating):
 
     return dollars_html
 
-# 마커 생성 함수
+# 지도 마커 생성 함수
 def create_marker(lat, lon, name, address, gmap_id, color='red'):
     html = f"""
     <div style='text-align: left; color: black; font-size: 14px;'>
@@ -89,7 +91,7 @@ def create_marker(lat, lon, name, address, gmap_id, color='red'):
         icon=folium.Icon(color=color)
     )
     
-# 정보 업데이트 함수
+# gmap_id 정보 업데이트 함수
 def update_info_container(gmap_id,merged_dict):
     with sql.connect(server_hostname=HOST, http_path=HTTP_PATH, access_token=PERSONAL_ACCESS_TOKEN) as conn:
         with conn.cursor() as cursor:
@@ -164,7 +166,7 @@ def update_info_container(gmap_id,merged_dict):
             else:
                 st.write("선택된 장소의 정보를 찾을 수 없습니다.")
 
-                
+#이모지를 포함한 지도 마커 생성 함수               
 def create_emoji_marker(lat, lon, name, address, gmap_id, first_main_category, color='red',g_rank='',url=''):
     # HTML 콘텐츠에 이모지 포함
     category_emoji = get_category_emoji(first_main_category)
@@ -202,33 +204,16 @@ def get_category_emoji(category):
     }
     return category_emojis.get(category, "🏷️")  # 기본 이모지로 '🏷️' 사용
 
-# def preprocess_data(data):
-#     # Split the data into lines
-#     lines = data.strip().split("\n")
-    
-#     # Extract summary sentences
-#     summary = [line.strip() for line in lines if line.strip().startswith("1.") or line.strip().startswith("2.") or line.strip().startswith("3.")]
-    
-#     # Extract keywords
-#     keyword_section_found = False
-#     keywords = []
-    
-#     for line in lines:
-#         line = line.strip()
-#         if line.startswith("10 key keywords:") or line.startswith("주요 키워드:") or line.startswith("키워드:")or line.startswith("keywords:"):
-#             keyword_section_found = True
-#             continue
-        
-#         if keyword_section_found:
-#             if line.startswith("1.") or line.startswith("2.") or line.startswith("3.") or line.startswith("4.") or line.startswith("5.") or line.startswith("6.") or line.startswith("7.") or line.startswith("8.") or line.startswith("9.") or line.startswith("10."):
-#                 keywords.append(line.split(" ")[1])  # Get the word after the number and period
+#리뷰 요약을 위한 클로드 api데이터 전처리 함수
 def preprocess_data(data):
     lines = data.strip().split("\n")
+    #리뷰요약 분리
     summary = [line.strip() for line in lines if line.strip().startswith("1.") or line.strip().startswith("2.") or line.strip().startswith("3.")]
 
     keywords = []
     keyword_section_found = False
     
+    #답안 키워드
     keyword_start_pattern = re.compile(r"^(10 key keywords:|주요 키워드:|키워드:|keywords:)", re.IGNORECASE)
     
     for line in lines:
@@ -241,27 +226,26 @@ def preprocess_data(data):
             # 숫자와 점 다음의 모든 텍스트를 추출
             match = re.match(r"\d+\.\s*(.*)", line)
             if match:
-                keywords.append(match.group(1))  # Get the entire text after the number and period
+                keywords.append(match.group(1))
 
     return summary, keywords
     
-    return summary, keywords
 #글씨 적어지는 함수
 def stream_data(_LOREM_IPSUM):
     for word in _LOREM_IPSUM.split(" "):
         yield word + " "
         time.sleep(0.02)
-# Example of how to use the function in the Streamlit app
+# 리뷰요약 출력 함수 1개씩 출력
 def review_summary(input_data):
     #st.write(input_data)
     summary, keywords = preprocess_data(input_data)
     
-    # Display the summary in Streamlit with emojis
+    # 리뷰요약 3개
     st.write_stream(stream_data(f"💬 {summary[0]}"))
     st.write_stream(stream_data(f"💬 {summary[1]}"))
     st.write_stream(stream_data(f"💬 {summary[2]}"))
     st.write('-----------')
-    # Display the keywords with emojis
+    # 키워드 10개
     st.subheader("🔑 **10 Keywords**")
     col_li1,col_li2 = st.columns([1,1])
     
@@ -274,7 +258,7 @@ def review_summary(input_data):
             with col_li2: 
                 st.write_stream(stream_data(f"{iidx}️⃣ **{keyword}**"))
                 
-#리뷰요약 출력 버전 2                
+#리뷰요약 출력 버전 2, 2개 한번에 요약               
 def review_summary2(input_data1,input_data2):
     #st.write(input_data)
     summary1, keywords1 = preprocess_data(input_data1)
@@ -284,13 +268,13 @@ def review_summary2(input_data1,input_data2):
     # 선택된 위치의 리뷰 표시
     with col_gmap1:
         st.subheader("📜선택된 위치 리뷰")
-        # Display the summary in Streamlit with emojis
+         # gmap_id1 리뷰요약 3개
         st.write_stream(stream_data(f"💬 {summary1[0]}"))
         st.write_stream(stream_data(f"💬 {summary1[1]}"))
         st.write_stream(stream_data(f"💬 {summary1[2]}"))
     with col_gmap2:
         st.subheader("📜추천 위치 리뷰")
-        # Display the summary in Streamlit with emojis
+         # gmap_id2 리뷰요약 3개
         st.write_stream(stream_data(f"💬 {summary2[0]}"))
         st.write_stream(stream_data(f"💬 {summary2[1]}"))
         st.write_stream(stream_data(f"💬 {summary2[2]}"))
@@ -300,7 +284,7 @@ def review_summary2(input_data1,input_data2):
     with b:
         st.write('-----------')
     col_gmap3,col_gmap4 = st.columns([5,5])
-    # Display he keywords with emojis
+    # gmap_id1,2에대한 키워드 10개씩
     for col_idx,i in enumerate([col_gmap3,col_gmap4]):
         with i:
             st.subheader("🔑 **10 Key Keywords**")
@@ -315,17 +299,9 @@ def review_summary2(input_data1,input_data2):
                     with col_li2: 
                         st.write_stream(stream_data(f"{iidx}️⃣ **{keyword}**"))
             
+#gmap_id의 랭킹과 예측값을 매핑하는 함수
 def create_gmap_id_prob_dict(gmap_id2_values, prob,rank):
-    """
-    gmap_id2_values와 hybrid_prob 리스트를 이용해 딕셔너리를 생성하는 함수.
 
-    Parameters:
-    - gmap_id2_values (list): gmap_id2 값들의 리스트.
-    - hybrid_prob (list): gmap_id2에 해당하는 확률 값들의 리스트.
-
-    Returns:
-    - dict: gmap_id2를 키로, hybrid_prob를 값으로 가지는 딕셔너리.
-    """
     # gmap_id2와 hybrid_prob를 딕셔너리로 매핑
     gmap_id_prob_dict = {gmap_id2_values[i]: prob[i] for i in range(len(gmap_id2_values))}
     gmap_id_rank_dict = {gmap_id2_values[i]: rank[i] for i in range(len(gmap_id2_values))}

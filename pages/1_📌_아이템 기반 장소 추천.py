@@ -16,7 +16,7 @@ st.set_page_config(page_title="아이템 기반 Gmap 추천시스템", page_icon
 # Databricks 연결
 with sql.connect(server_hostname=HOST, http_path=HTTP_PATH, access_token=PERSONAL_ACCESS_TOKEN) as conn:
     with conn.cursor() as cursor:
-        # Streamlit 앱
+        # 페이지 제목
         st.title("아이템 기반 Gmap 추천시스템🌎")
         
         # 세션 상태 초기화
@@ -36,11 +36,8 @@ with sql.connect(server_hostname=HOST, http_path=HTTP_PATH, access_token=PERSONA
         if st.session_state.page == "main":
             # 사이드바 설정
             st.sidebar.title("장소 입력")
-            # if chat_gmap_id: 
-            #     gmap_id1=chat_gmap_id
-            # else: gmap_id1 = st.sidebar.text_input("장소 입력", st.session_state.gmap_id1, key="_gmap_id1")
-            # st.session_state.gmap_id1 = gmap_id1
             
+            #챗봇에서 gmap_id가 연동 될때
             if chat_gmap_id:
                 # chat_gmap_id가 존재할 때
                 gmap_id1 = chat_gmap_id
@@ -106,7 +103,6 @@ with sql.connect(server_hostname=HOST, http_path=HTTP_PATH, access_token=PERSONA
                     
                     gmap_id2_tuple = tuple(gmap_id2_values)
 
-                    # item2item 쿼리
                     query = f"""
                     SELECT address2,gmap_id2,avg_rating2,description2,latitude2,longitude2,name2,num_of_reviews2,price2,state2,url2,main_category2,first_main_category2,region2,city2,hash_tag2 
                     FROM `hive_metastore`.`streamlit`.`gmap_id2_info`
@@ -170,7 +166,8 @@ with sql.connect(server_hostname=HOST, http_path=HTTP_PATH, access_token=PERSONA
                     cursor.execute(query)
                     similar_items = cursor.fetchall()
                     review_recommend_list.extend(similar_items)
-
+                    
+                    #데이터 종합
                     total_prob = [gbdt_prob, hybrid_prob, review_prob]
                     st.session_state.item_recommend_list = item_recommend_list
                     st.session_state.review_recommend_list = review_recommend_list
@@ -192,16 +189,19 @@ with sql.connect(server_hostname=HOST, http_path=HTTP_PATH, access_token=PERSONA
 
                     with col1:
                         with st.container(height=con_size):
+                            #비율 조정
                             col_dummy, col_main, col_dummy2 = st.columns([0.5, 8, 0.2])
+                            #지도 시각화
                             with col_main:
                                 m = folium.Map(location=[latitude1, longitude1], zoom_start=12)
+                                #각 그룹에대한 색깔 설정
                                 group1 = folium.FeatureGroup(name="🟩GBDT")
                                 group2 = folium.FeatureGroup(name="🟧Hybrid")
                                 group3 = folium.FeatureGroup(name="🟦Review")
 
-                                #create_marker(latitude1, longitude1, name1, address1, gmap_id1, 'red').add_to(m)
+                                #지도의 마커 찍는 함수
                                 create_emoji_marker(latitude1, longitude1, name1, address1, gmap_id1, first_main_category1,'red','',url1).add_to(m)
-
+                                #각 그룹별로 모델별로 예측 추천 결과 시각화 및 그룹,랭킹 지정
                                 for j, session_select in enumerate(recommendations):
                                     group = group1 if j == 0 else group2 if j == 1 else group3
                                     color = 'green' if j == 0 else 'orange' if j == 1 else 'blue'
@@ -218,15 +218,16 @@ with sql.connect(server_hostname=HOST, http_path=HTTP_PATH, access_token=PERSONA
                                 map_data = st_folium(m, width=600, height=480)
                             
                         
-                    # Keep the first red item unchanged
+                    # gmap_id1은 빨간색 설정
                     all_places = [(gmap_id1, f'🟥{name1}')]
 
-                    # Initialize lists to hold items by color group
+                    # 각 모델별 결과를 담을 리스트
                     green_items = []
                     orange_items = []
                     blue_items = []
 
-                    # Separate items into color groups
+                    # 해당 추천 결과의 정보를 볼 수 있는 사이드 바 구현
+                    # 색깔 할당
                     for index, sublist in enumerate(recommendations):
                         for r_c,item in enumerate(sublist):
                             if index < 1:  # 첫 5개 아이템 (0~4)
@@ -239,67 +240,30 @@ with sql.connect(server_hostname=HOST, http_path=HTTP_PATH, access_token=PERSONA
                                 emoji = '🟦'
                                 blue_items.append((item[1], f'{emoji}/{merged_rank_dict.get(str(item[1]), None)}️⃣{item[6]}'))
 
-                    # Sort items within each color group by the merged_rank_dict value (ascending order)
+                    # 색깔별로 예측값에 따른 랭킹으로 정렬
                     green_items.sort(key=lambda x: merged_rank_dict.get(str(x[0]), float('inf')))
                     orange_items.sort(key=lambda x: merged_rank_dict.get(str(x[0]), float('inf')))
                     blue_items.sort(key=lambda x: merged_rank_dict.get(str(x[0]), float('inf')))
 
-                    # Combine the sorted lists and append them to all_places, while keeping the first red item unchanged
+                    # 정렬후 합침
                     all_places.extend(green_items + orange_items + blue_items)
 
                     
                     with col2:
                         with st.container(height=con_size):
-                            # 선택 박스를 추가하여 사용자가 장소를 선택할 수 있게 합니다.
-                            #all_places = [(gmap_id1, name1)] + [(item[1], item[6]) for sublist in recommendations for item in sublist]
+                            # 선택 박스를 추가하여 사용자가 장소를 선택
+                            
                             selected_place = st.selectbox("장소 선택", all_places, format_func=lambda x: x[1])
                             
                             if selected_place:
                                 st.session_state.selected_gmap_id = selected_place[0]
                             update_info_container(st.session_state.selected_gmap_id,merged_dict)
-                    # import streamlit as st
+               
 
-                    # # 장소 리스트 초기화 및 색깔별 아이템 분류
-                    # all_places = [(gmap_id1, f'🟥{name1}')]  # 초기 장소 설정 - 레드 아이템
-                    # green_items = []
-                    # orange_items = []
-                    # blue_items = []
-
-                    # # 각 아이템을 색깔 그룹에 할당
-                    # for index, sublist in enumerate(recommendations):
-                    #     for item in sublist:
-                    #         if index < 1:
-                    #             green_items.append((item[1], f'🟩 {item[6]}'))
-                    #         elif index < 2:
-                    #             orange_items.append((item[1], f'🟧 {item[6]}'))
-                    #         else:
-                    #             blue_items.append((item[1], f'🟦 {item[6]}'))
-
-                    # # 모든 아이템을 하나의 리스트로 결합
-                    # all_places.extend(green_items + orange_items + blue_items)
-
-                    # # 멀티셀렉트를 사용하여 사용자가 여러 장소를 선택할 수 있도록 설정
-                    # selected_places = st.multiselect("여러 장소 선택", all_places, format_func=lambda x: x[1])
-
-                    # # 선택된 장소로부터 선택 박스 제공
-                    # if selected_places:
-                    #     # 선택 박스에 들어갈 선택된 장소 리스트
-                    #     select_options = [(place[0], place[1]) for place in selected_places]
-                    #     selected_place = st.selectbox("장소 세부 선택", select_options, format_func=lambda x: x[1])
-
-                    #     if selected_place:
-                    #         st.session_state.selected_gmap_id = selected_place[0]
-                    #         update_info_container(st.session_state.selected_gmap_id, merged_dict)
-
-                    # # 선택된 장소가 없을 경우 초기 상태 유지
-                    # else:
-                    #     st.write("선택된 장소가 없습니다.")
-            
-
-                    img_url = "http://wordnbow.net/wp-content/uploads/2021/01/unnamed.png"
+                    #각 모델별로 익스펜더 박스 생성후 이모지,예측값,랭킹,상세정보를 비교
                     title_list = ['**GBDT Model**', '**Hybrid Model**', '**Review Similarity**']
                     for idx, recommend_session in enumerate(recommendations):
-                        # Sort items by descending similarity within each recommendation session
+                        # 예측값이 높은순으로 정렬
                         sorted_items = sorted(enumerate(recommend_session), key=lambda x: total_prob[idx][x[0]], reverse=True)
                         if title_list[idx] =='**Review Similarity**':
                             p_name = '유사도'
@@ -307,13 +271,16 @@ with sql.connect(server_hostname=HOST, http_path=HTTP_PATH, access_token=PERSONA
                             p_name = 'Prob'
                         with st.expander(title_list[idx]):
                             cols = st.columns(5)
+                            #모델에 대한 결과 5개를 카테고리 이모지와 함께 나열
                             for i, (index, (address, gmap_id, avg_rating, description, latitude, longitude, name, num_of_reviews, price, state, url, main_category, first_main_category, region, city, hash_tag)) in enumerate(sorted_items):
                                 category_emoji = get_category_emoji(first_main_category)
+                                #이모지 크기 조정
                                 emoji_code = resize_emoji(category_emoji, font_size=80)
-                                #img_resized = resize_image(img_url)
+
                                 with cols[i % 5]:
-                                    #display_image(img_resized, f"")
+                                    #랭킹
                                     st.write(f'{i+1}️⃣')
+                                    #이모지
                                     st.markdown(emoji_code, unsafe_allow_html=True)
                                     html_code = f"""
                                     <div style='text-align: center; color: gray; font-size: 18px;'>
@@ -321,6 +288,7 @@ with sql.connect(server_hostname=HOST, http_path=HTTP_PATH, access_token=PERSONA
                                     </div>
                                     """
                                     st.markdown(html_code, unsafe_allow_html=True)
+                                    #나머지 상세 정보
                                     st.write_stream(stream_data(f'*Name* : [{name}]({url})'))
                                     st.write_stream(stream_data(f'*Category* : {category_emoji}{main_category}'))
                                     st.write_stream(stream_data(f'*City* : 🏙️{city}'))
@@ -332,9 +300,3 @@ with sql.connect(server_hostname=HOST, http_path=HTTP_PATH, access_token=PERSONA
 
 
 
-
-                # # 메타정보 페이지
-                # elif st.session_state.page == "메타정보":
-                #     if st.button("메인 페이지로 이동"):
-                #         change_page("main")
-                #     meta_info(conn, cursor)

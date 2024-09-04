@@ -22,7 +22,7 @@ with sql.connect(server_hostname=HOST, http_path=HTTP_PATH, access_token=PERSONA
         if "selected_user_id" not in st.session_state:
             st.session_state.selected_user_id = ""
         # 유저 데이터 함수
-        #@st.cache_data
+        
         def get_user_data():
             # 실제 user_id, nickname 데이터를 받아오는 쿼리 작성
             user_query = """SELECT DISTINCT user_id, name FROM hive_metastore.soojeong.user2item_recommendations2);"""
@@ -79,7 +79,7 @@ with sql.connect(server_hostname=HOST, http_path=HTTP_PATH, access_token=PERSONA
                 pitch=0,
                 height=300
             )
-
+            #파이덱 지도 옵션
             layer = pdk.Layer(
                 "ScatterplotLayer",
                 data=[{"position": [lon, lat]}],
@@ -88,7 +88,7 @@ with sql.connect(server_hostname=HOST, http_path=HTTP_PATH, access_token=PERSONA
                 get_fill_color=[0, 0, 255, 200],  # 파란색 마커
                 pickable=True,
             )
-
+            #지도 시각화
             r = pdk.Deck(
                 layers=[layer],
                 initial_view_state=view_state,
@@ -100,24 +100,20 @@ with sql.connect(server_hostname=HOST, http_path=HTTP_PATH, access_token=PERSONA
             
         with st.sidebar:
             st.header("추천 요청")
-            #if 'selected_user_id' not in st.session_state:
-                # selected_user_id = st.text_input("아이디 입력", st.session_state.selected_user_id, key="_selected_user_id")
-                # st.session_state.selected_user_id = selected_user_id
+            #아이디 입력
             selected_user_id = st.sidebar.text_input("아이디 입력", st.session_state.selected_user_id, key="_selected_user_id")
-            # user_query = f"""SELECT DISTINCT user_id, name 
-            #                 FROM hive_metastore.soojeong.user2item_recommendations2
-            #                 WHERE user_id = '{selected_user}'"""
-            # cursor.execute(user_query)
-            # selected_user_id,nickname = cursor.fetchone()
+
             st.session_state.selected_user_id = selected_user_id
             selected_user_id = selected_user_id
-            #st.session_state.nickname = nickname
+
+            
             if st.button("랜덤 유저 선택"):
                 user_data = get_user_data()
                 selected_user_id, nickname = random_select_user(user_data)
                 st.session_state.selected_user_id = selected_user_id
                 selected_user_id = selected_user_id
-                
+        
+        #선택된 유저의 아이디,이름 가져오기
         if selected_user_id:
             try:    
                 user_query = f"""SELECT DISTINCT user_id, name 
@@ -135,17 +131,7 @@ with sql.connect(server_hostname=HOST, http_path=HTTP_PATH, access_token=PERSONA
                 except:
                     pass
 
-
-                    # if st.button("랜덤 유저 다시 선택"):
-                    #     user_data = get_user_data()
-                    #     selected_user_id, nickname = random_select_user(user_data)
-                    #     st.session_state.selected_user_id = selected_user_id
-                    #     st.session_state.nickname = nickname
-                    #     # 새로 선택된 유저의 닉네임을 사이드바에 반영
-                    #     st.write_stream(stream_data(f"{nickname}님을 위한 추천 결과"))
-                    #     # 화면을 업데이트하기 위해 query_params를 설정합니다.
-                    #     st.session_state.query_params = {"user": nickname}
-
+                # 유저이름 출력
                 if 'selected_user_id' in st.session_state:
                     st.title(f"{st.session_state.nickname}님을 위한 추천 아이템들✨")
                     
@@ -153,7 +139,7 @@ with sql.connect(server_hostname=HOST, http_path=HTTP_PATH, access_token=PERSONA
                     recommendations = get_recommendations(st.session_state.selected_user_id)
                     
             
-
+                    #탭창 생성
                     tabs = st.tabs(["🏆Rank 1", "🏆Rank 2", "🏆Rank 3", "🏆Rank 4", "🏆Rank 5"])
                     
                     for idx, tab in enumerate(tabs):

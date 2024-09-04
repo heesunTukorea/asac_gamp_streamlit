@@ -1,21 +1,23 @@
 import streamlit as st
 from PIL import Image
 
-
+#팝업창 텍스트 및 이미지 설정
 st.set_page_config(page_title="알감자의 추천시스템", page_icon="🥔",layout="wide")
 
+#프로젝트 제목
 st.markdown("""
 # LLM과 협업 필터링을 이용한 구글맵 추천<br> 시스템 개발🥔
 """, unsafe_allow_html=True)
 st.write(' ')
 
 
-
+#프로젝트 소개
 x2 = st.expander('🍟프로젝트 소개')
 x2.markdown('''
 구글맵의 텍스트 리뷰, 평점, 메타 정보를 활용하여 개인화된 추천을 제공하는 챗봇 개발 프로젝트. <br> Item to Item, User to Item 두 종류의 협업 필터링과 LLM을 보완한 RAG기법을 통합해 사용자에게 맞춤형 서비스를 제공.
 ''',unsafe_allow_html=True)
 
+#사이드바
 with st.sidebar:
     st.write("목록")
 st.write(' ')
@@ -23,6 +25,8 @@ option = st.selectbox(
     "🥚알감자 정보",
     ("페이지 정보", "팀원 소개", "기타"),
 )
+
+#각 페이지 정보 입력
 if option == "페이지 정보":
     tab1, tab2, tab3, tab4= st.tabs(["1.📌 아이템 기반 추천", "2.📝 리뷰요약", "3.🕵️ 유저 기반 추천","4.👾 Chatbot"])
 
